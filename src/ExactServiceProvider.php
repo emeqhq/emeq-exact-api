@@ -14,6 +14,7 @@ use Emeq\ExactApi\Exceptions\MissingCredentialResolverException;
 use Emeq\ExactApi\Exceptions\MissingTokenStoreException;
 use Emeq\ExactApi\Http\ExactConnector;
 use Emeq\ExactApi\Http\Middleware\VerifyExactSignature;
+use Emeq\ExactApi\Http\RateLimit\ExactRateGate;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Routing\Router;
 use Spatie\LaravelPackageTools\Package;
@@ -78,6 +79,23 @@ class ExactServiceProvider extends PackageServiceProvider
             };
         });
 
+        // Rate-gate is een singleton: het budget-window moet gedeeld worden over
+        // élke connector-instance binnen dit proces, niet per-call opnieuw gebouwd.
+        $this->app->singleton(ExactRateGate::class, function ($app): ExactRateGate {
+            /** @var \Illuminate\Contracts\Config\Repository $config */
+            $config = $app->make('config');
+
+            return new ExactRateGate(
+                cacheFactory: $app->make(CacheFactory::class),
+                store: $config->get('exact.rate_limit.store'),
+                prefix: (string) $config->get('exact.rate_limit.prefix', 'exact_rate_'),
+                windowSeconds: (int) $config->get('exact.rate_limit.window', 60),
+                safetyMargin: (int) $config->get('exact.rate_limit.safety_margin', 2),
+                maxWaitSeconds: (int) $config->get('exact.rate_limit.max_wait', 10),
+                fallbackLimit: (int) $config->get('exact.rate_limit.fallback_limit', 60),
+            );
+        });
+
         // Factory: per-division connector.
         $this->app->bind('exact.connector-factory', function ($app) {
             return function (OAuthAuthenticator $authenticator, string $division) use ($app): ExactConnector {
@@ -95,6 +113,7 @@ class ExactServiceProvider extends PackageServiceProvider
                     tries: (int) $retry['times'],
                     retryInterval: (int) $retry['sleep'],
                     retryOnStatuses: array_map('intval', $retry['on']),
+                    rateGate: $config->get('exact.rate_limit.enabled', true) ? $app->make(ExactRateGate::class) : null,
                 );
             };
         });

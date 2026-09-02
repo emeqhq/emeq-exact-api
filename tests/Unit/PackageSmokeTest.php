@@ -13,7 +13,10 @@ use Emeq\ExactApi\ExactServiceProvider;
 use Emeq\ExactApi\Exceptions\MissingCredentialResolverException;
 use Emeq\ExactApi\Exceptions\MissingTokenStoreException;
 use Emeq\ExactApi\Http\ExactConnector;
+use Emeq\ExactApi\Http\RateLimit\ExactRateGate;
 use Emeq\ExactApi\Tests\Support\FakeCredentialResolver;
+use Saloon\Helpers\MiddlewarePipeline;
+use Saloon\Http\PendingRequest;
 
 it('registers the service provider', function (): void {
     expect(app()->getProvider(ExactServiceProvider::class))->toBeInstanceOf(ExactServiceProvider::class);
@@ -79,4 +82,54 @@ it('builds the authorize URL from the resolved credentials', function (): void {
     expect($url)->toContain('/api/oauth2/auth')
         ->and($url)->toContain('client_id=test-client-id')
         ->and($url)->toContain('state=state-123');
+});
+
+it('publishes the rate_limit config defaults', function (): void {
+    expect(config('exact.rate_limit.enabled'))->toBeTrue()
+        ->and(config('exact.rate_limit.window'))->toBe(60)
+        ->and(config('exact.rate_limit.safety_margin'))->toBe(2)
+        ->and(config('exact.rate_limit.max_wait'))->toBe(10)
+        ->and(config('exact.rate_limit.fallback_limit'))->toBe(60);
+});
+
+it('binds ExactRateGate as a singleton', function (): void {
+    expect(app(ExactRateGate::class))->toBe(app(ExactRateGate::class));
+});
+
+it('wires the connector-factory with a throttling rate gate by default', function (): void {
+    config([
+        'exact.rate_limit.fallback_limit' => 1,
+        'exact.rate_limit.safety_margin'  => 0,
+        'exact.rate_limit.max_wait'       => 1,
+    ]);
+    app()->bind(ExactCredentialResolver::class, fn () => FakeCredentialResolver::with());
+    app()->bind(TokenStore::class, CacheTokenStore::class);
+
+    $connector      = app(Exact::class)->connector('4471372');
+    $pendingRequest = test()->createMock(PendingRequest::class);
+    $pendingRequest->method('middleware')->willReturn(new MiddlewarePipeline());
+
+    $connector->boot($pendingRequest); // verbruikt het enige slot
+
+    $start = microtime(true);
+    $connector->boot($pendingRequest); // budget op, moet wachten
+
+    expect(microtime(true) - $start)->toBeGreaterThanOrEqual(0.9);
+});
+
+it('builds a connector without a rate gate when rate_limit.enabled is false', function (): void {
+    config([
+        'exact.rate_limit.enabled'        => false,
+        'exact.rate_limit.fallback_limit' => 1,
+        'exact.rate_limit.safety_margin'  => 0,
+    ]);
+    app()->bind(ExactCredentialResolver::class, fn () => FakeCredentialResolver::with());
+    app()->bind(TokenStore::class, CacheTokenStore::class);
+
+    $connector      = app(Exact::class)->connector('4471372');
+    $pendingRequest = test()->createMock(PendingRequest::class);
+    $pendingRequest->expects(test()->never())->method('middleware');
+
+    $connector->boot($pendingRequest);
+    $connector->boot($pendingRequest); // zou anders het budget (1) al overschrijden
 });

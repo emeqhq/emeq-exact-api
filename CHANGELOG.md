@@ -2,6 +2,11 @@
 
 Alle noemenswaardige wijzigingen aan `emeq/exact-api`. Volgt [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/) en [Semantic Versioning](https://semver.org/lang/nl/).
 
+## [0.10.0] - 2026-09-02
+
+### Added
+- `Http\RateLimit\ExactRateGate` — proactieve, Redis-backed rate-gate per division. `ExactConnector` retryde al automatisch op 429, maar met een vast 1s-interval dat te kort is voor Exact's minuut-quota; bij een bulk-operatie (bv. 100 boekingen tegelijk) bleef dat reactief falen. De gate reserveert nu een slot vóór elke send() (atomisch increment-dan-toets, om een race tussen gelijktijdige callers te voorkomen) en wacht bounded (`max_wait`, default 10s) zodra het budget op is — niet de volle 60s-window, dat zou een sync HTTP-request/Octane-worker te lang vasthouden. Exact publiceert geen concreet quota-getal in de partner-docs, dus `fallback_limit` (default 60) is een bootstrap-startwaarde, geen Exact-beleid: zodra een respons `X-RateLimit-Minutely-Limit` meestuurt overschrijft die de default. Nieuwe config-namespace `exact.rate_limit.*`, `ExactConnector` kreeg een nullable `rateGate`-constructorparameter (backwards-compatible) en de `exact.connector-factory` bindt 'm standaard aan (uit te zetten via `exact.rate_limit.enabled = false`).
+
 ## [0.9.0] - 2026-08-20
 
 ### Added

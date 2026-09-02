@@ -11,11 +11,13 @@ use Emeq\ExactApi\Exceptions\RateLimitException;
 use Emeq\ExactApi\Exceptions\RequestTooBroadException;
 use Emeq\ExactApi\Exceptions\ServerException;
 use Emeq\ExactApi\Exceptions\ValidationException;
+use Emeq\ExactApi\Http\RateLimit\ExactRateGate;
 use Saloon\Contracts\Authenticator;
 use Saloon\Enums\Method;
 use Saloon\Exceptions\Request\FatalRequestException;
 use Saloon\Exceptions\Request\RequestException;
 use Saloon\Http\Connector;
+use Saloon\Http\PendingRequest;
 use Saloon\Http\Request;
 use Saloon\Http\Response;
 use Throwable;
@@ -57,6 +59,7 @@ class ExactConnector extends Connector
         public ?int $tries = 3,
         public ?int $retryInterval = 1000,
         private readonly array $retryOnStatuses = [429, 500, 502, 503, 504],
+        private readonly ?ExactRateGate $rateGate = null,
     ) {
         // Onder een andere naam opgeslagen: Saloon\Http\Connector declareert al
         // een niet-readonly $authenticator-property die we niet mogen herdeclareren.
@@ -66,6 +69,27 @@ class ExactConnector extends Connector
     public function resolveBaseUrl(): string
     {
         return mb_rtrim($this->apiBaseUrl, '/') . '/api/v1/' . $this->division;
+    }
+
+    /**
+     * Draait vóór élke fysieke send() (ook Saloon's eigen 429-retries — elke
+     * poging telt mee tegen het budget). Proactief throttlen vóórdat Exact's
+     * eigen minuut-quota geraakt wordt, i.p.v. alleen reageren op een 429.
+     */
+    public function boot(PendingRequest $pendingRequest): void
+    {
+        if (null === $this->rateGate) {
+            return;
+        }
+
+        $this->rateGate->throttle($this->division);
+
+        $rateGate = $this->rateGate;
+        $division = $this->division;
+
+        $pendingRequest->middleware()->onResponse(
+            static fn (Response $response) => $rateGate->recordLimit($division, self::rateLimitHeaders($response)),
+        );
     }
 
     public function handleRetry(FatalRequestException|RequestException $exception, Request $request): bool

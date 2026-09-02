@@ -11,9 +11,12 @@ use Emeq\ExactApi\Exceptions\RateLimitException;
 use Emeq\ExactApi\Exceptions\RequestTooBroadException;
 use Emeq\ExactApi\Exceptions\ServerException;
 use Emeq\ExactApi\Exceptions\ValidationException;
+use Emeq\ExactApi\Http\RateLimit\ExactRateGate;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Saloon\Enums\Method;
 use Saloon\Exceptions\Request\FatalRequestException;
 use Saloon\Exceptions\Request\RequestException;
+use Saloon\Helpers\MiddlewarePipeline;
 use Saloon\Http\PendingRequest;
 
 /** Request-mock met een vaste HTTP-methode voor de retry-tests. */
@@ -156,3 +159,45 @@ it('handleRetry true for an idempotent GET on transient 5xx', function (int $sta
 
     expect(makeExactConnector()->handleRetry($exception, requestWithMethod(Method::GET)))->toBeTrue();
 })->with([500, 502, 503, 504]);
+
+it('boot() does nothing when no rate gate is configured', function (): void {
+    $pendingRequest = test()->createMock(PendingRequest::class);
+    $pendingRequest->expects(test()->never())->method('middleware');
+
+    makeExactConnector()->boot($pendingRequest);
+});
+
+it('boot() throttles via the rate gate before sending', function (): void {
+    $gate      = new ExactRateGate(cacheFactory: app(CacheFactory::class), fallbackLimit: 1, safetyMargin: 0, maxWaitSeconds: 1);
+    $connector = makeExactConnector(rateGate: $gate);
+
+    $pendingRequest = test()->createMock(PendingRequest::class);
+    $pendingRequest->method('middleware')->willReturn(new MiddlewarePipeline());
+
+    $connector->boot($pendingRequest); // verbruikt het enige toegestane slot
+
+    $start = microtime(true);
+    $connector->boot($pendingRequest); // budget op, moet wachten (bounded op 1s)
+
+    expect(microtime(true) - $start)->toBeGreaterThanOrEqual(0.9);
+});
+
+it('boot() registers response middleware that records the live rate-limit header', function (): void {
+    $gate      = new ExactRateGate(cacheFactory: app(CacheFactory::class), fallbackLimit: 1, safetyMargin: 0, maxWaitSeconds: 1);
+    $connector = makeExactConnector(rateGate: $gate);
+
+    $pipeline       = new MiddlewarePipeline();
+    $pendingRequest = test()->createMock(PendingRequest::class);
+    $pendingRequest->method('middleware')->willReturn($pipeline);
+
+    $connector->boot($pendingRequest); // verbruikt het enige slot (fallbackLimit=1), registreert response-middleware
+
+    // Zonder recordLimit() zou het volgende boot()-slot nog steeds vol zijn (fallback=1).
+    // Een respons met een hogere live limiet (5) moet dat budget verruimen.
+    $pipeline->executeResponsePipeline(fakeExactResponse(200, '{}', headers: ['X-RateLimit-Minutely-Limit' => '5']));
+
+    $start = microtime(true);
+    $connector->boot($pendingRequest);
+
+    expect(microtime(true) - $start)->toBeLessThan(0.5);
+});

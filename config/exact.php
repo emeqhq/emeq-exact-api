@@ -71,8 +71,52 @@ return [
         'retry' => [
             'times' => 3,
             'sleep' => 1000,
-            'on' => [429, 500, 502, 503, 504],
+            'on'    => [429, 500, 502, 503, 504],
         ],
+    ],
+
+    /*
+     * Proactieve rate-gate: vertraagt vóór Exact's eigen minuut-quota geraakt
+     * wordt, i.p.v. alleen te reageren op een 429. `fallback_limit` is GEEN
+     * Exact-gedocumenteerde waarde (Exact publiceert geen concreet quota-getal)
+     * — een conservatieve bootstrap-default totdat de eerste respons
+     * `X-RateLimit-Minutely-Limit` meestuurt, waarna die de default overschrijft.
+     */
+    'rate_limit' => [
+        'enabled' => true,
+
+        /*
+         * Cache-store voor de rate-gate-tellers. Null = default store. Los van
+         * `cache.lock_store` (die is voor de refresh-lock) — mag dezelfde store
+         * zijn, maar hoeft niet.
+         */
+        'store' => env('EXACT_RATE_LIMIT_STORE'),
+
+        'prefix' => 'exact_rate_',
+
+        /*
+         * Breedte van het budget-window in seconden — matcht Exact's "minutely"
+         * quota-terminologie.
+         */
+        'window' => 60,
+
+        /*
+         * Aantal calls dat als marge wordt vrijgehouden vóór de limiet — stopt
+         * vóór de muur, niet ertegenaan.
+         */
+        'safety_margin' => 2,
+
+        /*
+         * Maximale wachttijd (seconden) per throttle()-call. Voorkomt dat een
+         * sync HTTP-request/Octane-worker de volle window-reset (tot 60s) blokkeert.
+         */
+        'max_wait' => 10,
+
+        /*
+         * Bootstrap-default vóór de eerste echte X-RateLimit-Minutely-Limit-
+         * header binnenkomt. Geen Exact-beleid, enkel een startwaarde.
+         */
+        'fallback_limit' => 60,
     ],
 
     'webhook' => [

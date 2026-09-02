@@ -93,7 +93,7 @@ function buildExactAuthenticator(
     return [$authenticator, $credentials, $store];
 }
 
-function makeExactConnector(string $division = '4471372'): ExactConnector
+function makeExactConnector(string $division = '4471372', ?Emeq\ExactApi\Http\RateLimit\ExactRateGate $rateGate = null): ExactConnector
 {
     $authenticator = new OAuthAuthenticator(
         credentials: exactCreds(),
@@ -106,6 +106,7 @@ function makeExactConnector(string $division = '4471372'): ExactConnector
         apiBaseUrl: 'https://start.exactonline.nl',
         division: $division,
         authenticator: $authenticator,
+        rateGate: $rateGate,
     );
 }
 
