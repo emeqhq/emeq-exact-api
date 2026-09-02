@@ -83,7 +83,7 @@ return [
      * `X-RateLimit-Minutely-Limit` meestuurt, waarna die de default overschrijft.
      */
     'rate_limit' => [
-        'enabled' => true,
+        'enabled' => env('EXACT_RATE_LIMIT_ENABLED', true),
 
         /*
          * Cache-store voor de rate-gate-tellers. Null = default store. Los van

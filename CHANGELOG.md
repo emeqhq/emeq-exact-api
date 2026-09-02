@@ -2,6 +2,11 @@
 
 Alle noemenswaardige wijzigingen aan `emeq/exact-api`. Volgt [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/) en [Semantic Versioning](https://semver.org/lang/nl/).
 
+## [0.10.1] - 2026-09-02
+
+### Fixed
+- `exact.rate_limit.enabled` is nu `env('EXACT_RATE_LIMIT_ENABLED', true)` i.p.v. hardcoded `true`. Zonder env-toggle kon een host de rate-gate niet uitzetten voor test-omgevingen — de Hub's testsuite deelt één cache-store over honderden tests zonder tussentijdse flush, waardoor de gate's per-division counter over de hele suite accumuleert en na budget-uitputting elke volgende call bounded blokkeert. Resultaat: een test-run die seconden hoort te duren liep vast op minuten. Consumers zetten `EXACT_RATE_LIMIT_ENABLED=false` in hun test-env.
+
 ## [0.10.0] - 2026-09-02
 
 ### Added
