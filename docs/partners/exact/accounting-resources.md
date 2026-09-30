@@ -58,6 +58,16 @@ De caller levert al-geresolvede waarden (relatie-GUID, journaal-code, regels met
 Exact-veldnamen. Het create-antwoord levert de externe referentie via
 `OData\Envelope::firstId()`.
 
+### Boekingsregel wijzigen (PUT)
+
+| Request | Endpoint | Body |
+|---|---|---|
+| `Write\UpdatePurchaseEntryLine` | `purchaseentry/PurchaseEntryLines(guid'{id}')` | `GLAccount` |
+| `Write\UpdateSalesEntryLine` | `salesentry/SalesEntryLines(guid'{id}')` | `GLAccount` |
+
+Key = de regel-`ID` (GUID). Alleen `GLAccount` (Edm.Guid) gaat mee, zodat Exact de
+overige regelvelden ongemoeid laat.
+
 ### Relatie aanmaken
 
 | Request | Endpoint | Verplicht | Optioneel |

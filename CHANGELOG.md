@@ -2,6 +2,11 @@
 
 Alle noemenswaardige wijzigingen aan `emeq/exact-api`. Volgt [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/) en [Semantic Versioning](https://semver.org/lang/nl/).
 
+## [Unreleased]
+
+### Added
+- `Http\Request\Write\UpdatePurchaseEntryLine` en `Write\UpdateSalesEntryLine` — `PUT purchaseentry/PurchaseEntryLines(guid'{id}')` en `PUT salesentry/SalesEntryLines(guid'{id}')`. Wijzigen het grootboek van een bestaande boekingsregel; de body draagt alleen `GLAccount` (Edm.Guid), zodat Exact de overige regelvelden ongemoeid laat.
+
 ## [0.10.1] - 2026-09-02
 
 ### Fixed
