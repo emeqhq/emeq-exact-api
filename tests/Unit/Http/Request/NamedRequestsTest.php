@@ -30,6 +30,8 @@ use Emeq\ExactApi\Http\Request\Write\CreatePurchaseEntry;
 use Emeq\ExactApi\Http\Request\Write\CreateSalesEntry;
 use Emeq\ExactApi\Http\Request\Write\CreateWebhookSubscription;
 use Emeq\ExactApi\Http\Request\Write\UpdateAccount;
+use Emeq\ExactApi\Http\Request\Write\UpdatePurchaseEntryLine;
+use Emeq\ExactApi\Http\Request\Write\UpdateSalesEntryLine;
 use Saloon\Enums\Method;
 
 it('GetGlAccounts owns its path and passes the query through', function (): void {
@@ -320,6 +322,17 @@ it('UpdateAccount promotes a relation to customer and drops null fields', functi
         'IsSales' => true,
     ]);
 });
+
+it('entry-line updates PUT only the GLAccount to the guid-addressed line', function (string $class, string $endpoint): void {
+    $request = new $class('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', 'gl-guid');
+
+    expect($request->getMethod())->toBe(Method::PUT)
+        ->and($request->resolveEndpoint())->toBe($endpoint)
+        ->and($request->body()->all())->toBe(['GLAccount' => 'gl-guid']);
+})->with([
+    'purchase entry line' => [UpdatePurchaseEntryLine::class, "/purchaseentry/PurchaseEntryLines(guid'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')"],
+    'sales entry line'    => [UpdateSalesEntryLine::class, "/salesentry/SalesEntryLines(guid'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')"],
+]);
 
 it('CreateDocument maps neutral input onto the Exact Documents body', function (): void {
     $request = new CreateDocument(
