@@ -113,6 +113,16 @@ return [
         'max_wait' => 10,
 
         /*
+         * Maximale totale wachttijd (seconden) over alle throttle()-calls binnen
+         * één request of job. Is die op, dan gooit de gate een
+         * RateLimitException met retryAfterSeconds i.p.v. verder te wachten.
+         * De effectieve wacht per call is dus min(max_wait, max_total_wait);
+         * met de defaults (10 en 8) bindt max_wait niet. Artisan-commands
+         * krijgen geen scope-reset: het budget geldt voor de hele CLI-run.
+         */
+        'max_total_wait' => env('EXACT_RATE_LIMIT_MAX_TOTAL_WAIT', 8),
+
+        /*
          * Bootstrap-default vóór de eerste echte X-RateLimit-Minutely-Limit-
          * header binnenkomt. Geen Exact-beleid, enkel een startwaarde.
          */

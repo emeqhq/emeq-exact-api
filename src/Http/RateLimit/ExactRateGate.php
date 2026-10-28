@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Emeq\ExactApi\Http\RateLimit;
 
+use Emeq\ExactApi\Exceptions\RateLimitException;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Sleep;
 
 /**
  * Proactieve, Redis-backed rate-gate per Exact-division.
@@ -17,9 +20,14 @@ use Illuminate\Contracts\Cache\Factory as CacheFactory;
  * `throttle()` reserveert een slot door eerst atomisch te incrementen en pas
  * dán te toetsen — voorkomt de race waarbij meerdere gelijktijdige callers
  * allemaal "onder het budget" lezen vóór iemand incrementeert.
+ *
+ * De totale wachttijd per instance is begrensd op `$maxTotalWaitSeconds`; past
+ * de volgende wacht daar niet meer in, dan volgt een `RateLimitException`.
  */
 final class ExactRateGate
 {
+    private int $waitedSeconds = 0;
+
     public function __construct(
         private readonly CacheFactory $cacheFactory,
         private readonly ?string $store = null,
@@ -28,6 +36,7 @@ final class ExactRateGate
         private readonly int $safetyMargin = 2,
         private readonly int $maxWaitSeconds = 10,
         private readonly int $fallbackLimit = 60,
+        private readonly int $maxTotalWaitSeconds = 8,
     ) {
     }
 
@@ -43,10 +52,20 @@ final class ExactRateGate
         $budget = max(1, $limit - $this->safetyMargin);
 
         if ($count > $budget) {
-            $secondsIntoWindow = time() % $this->windowSeconds;
+            $secondsIntoWindow = Carbon::now()->getTimestamp() % $this->windowSeconds;
             $secondsUntilReset = $this->windowSeconds - $secondsIntoWindow;
+            $wait              = min($secondsUntilReset, $this->maxWaitSeconds);
 
-            usleep(min($secondsUntilReset, $this->maxWaitSeconds) * 1_000_000);
+            if ($this->waitedSeconds + $wait > $this->maxTotalWaitSeconds) {
+                throw new RateLimitException(
+                    message: 'Exact rate-gate: wachtbudget van ' . $this->maxTotalWaitSeconds . 's op, retry after ' . $secondsUntilReset . 's.',
+                    retryAfterSeconds: $secondsUntilReset,
+                );
+            }
+
+            $this->waitedSeconds += $wait;
+
+            Sleep::for($wait)->seconds();
         }
     }
 
@@ -66,7 +85,7 @@ final class ExactRateGate
 
     private function countKey(string $division): string
     {
-        return $this->prefix . $division . ':count:' . intdiv(time(), $this->windowSeconds);
+        return $this->prefix . $division . ':count:' . intdiv(Carbon::now()->getTimestamp(), $this->windowSeconds);
     }
 
     private function limitKey(string $division): string

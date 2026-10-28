@@ -15,6 +15,7 @@ use Emeq\ExactApi\Exceptions\MissingTokenStoreException;
 use Emeq\ExactApi\Http\ExactConnector;
 use Emeq\ExactApi\Http\RateLimit\ExactRateGate;
 use Emeq\ExactApi\Tests\Support\FakeCredentialResolver;
+use Illuminate\Support\Sleep;
 use Saloon\Helpers\MiddlewarePipeline;
 use Saloon\Http\PendingRequest;
 
@@ -89,11 +90,18 @@ it('publishes the rate_limit config defaults', function (): void {
         ->and(config('exact.rate_limit.window'))->toBe(60)
         ->and(config('exact.rate_limit.safety_margin'))->toBe(2)
         ->and(config('exact.rate_limit.max_wait'))->toBe(10)
-        ->and(config('exact.rate_limit.fallback_limit'))->toBe(60);
+        ->and(config('exact.rate_limit.fallback_limit'))->toBe(60)
+        ->and(config('exact.rate_limit.max_total_wait'))->toBe(8);
 });
 
-it('binds ExactRateGate as a singleton', function (): void {
-    expect(app(ExactRateGate::class))->toBe(app(ExactRateGate::class));
+it('binds ExactRateGate scoped, so each request or job gets a fresh wait budget', function (): void {
+    $first = app(ExactRateGate::class);
+
+    expect(app(ExactRateGate::class))->toBe($first);
+
+    app()->forgetScopedInstances();
+
+    expect(app(ExactRateGate::class))->not->toBe($first);
 });
 
 it('wires the connector-factory with a throttling rate gate by default', function (): void {
@@ -123,6 +131,7 @@ it('builds a connector without a rate gate when rate_limit.enabled is false', fu
         'exact.rate_limit.fallback_limit' => 1,
         'exact.rate_limit.safety_margin'  => 0,
     ]);
+    Sleep::fake();
     app()->bind(ExactCredentialResolver::class, fn () => FakeCredentialResolver::with());
     app()->bind(TokenStore::class, CacheTokenStore::class);
 
@@ -132,4 +141,6 @@ it('builds a connector without a rate gate when rate_limit.enabled is false', fu
 
     $connector->boot($pendingRequest);
     $connector->boot($pendingRequest); // zou anders het budget (1) al overschrijden
+
+    Sleep::assertNeverSlept();
 });

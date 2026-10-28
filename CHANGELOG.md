@@ -2,6 +2,13 @@
 
 Alle noemenswaardige wijzigingen aan `emeq/exact-api`. Volgt [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/) en [Semantic Versioning](https://semver.org/lang/nl/).
 
+## [0.12.0] - 2026-10-28
+
+### Fixed
+- `Http\RateLimit\ExactRateGate` begrenst nu de totale wachttijd per request of job (`exact.rate_limit.max_total_wait`, default 8s, env `EXACT_RATE_LIMIT_MAX_TOTAL_WAIT`). De gate wachtte vóór elke gated send tot `max_wait` (10s); één Hub-request doet ~7 sends, dus de som liep boven Octane's `max_execution_time` van 30s en PHP werd midden in het request afgebroken. Past de volgende wacht niet meer in het budget, dan wacht de gate niet gedeeltelijk maar gooit `RateLimitException` met `retryAfterSeconds` = seconden tot de window-reset. `max_wait` houdt zijn betekenis. De gate is nu `scoped` i.p.v. `singleton` gebonden: Octane en de queue-worker flushen scoped instances per request/job, dus het budget lekt niet over requests. De tellers staan nog steeds in de cache en blijven gedeeld.
+- De effectieve wacht per call is nu `min(max_wait, max_total_wait)`. Met de defaults (10 en 8) bindt `max_wait` dus niet: ligt de reset meer dan 8s weg, dan past de eerste wacht (10s) al niet in het budget en gooit de gate meteen `RateLimitException` zonder te slapen. Daarom een minor release en geen patch: wie op het oude wachtgedrag leunde, krijgt nu een exception.
+- Artisan-commands krijgen geen scope-reset. Het budget geldt voor de hele CLI-run, dus lange runs (purge, bulk) kunnen stoppen met `RateLimitException`. Verhoog voor zo'n run `EXACT_RATE_LIMIT_MAX_TOTAL_WAIT`.
+
 ## [0.11.0] - 2026-09-30
 
 ### Added

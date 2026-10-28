@@ -79,9 +79,9 @@ class ExactServiceProvider extends PackageServiceProvider
             };
         });
 
-        // Rate-gate is een singleton: het budget-window moet gedeeld worden over
-        // élke connector-instance binnen dit proces, niet per-call opnieuw gebouwd.
-        $this->app->singleton(ExactRateGate::class, function ($app): ExactRateGate {
+        // Scoped: de tellers leven in de cache, het wachtbudget per request/job.
+        // Octane en de queue-worker flushen scoped instances, een singleton niet.
+        $this->app->scoped(ExactRateGate::class, function ($app): ExactRateGate {
             /** @var \Illuminate\Contracts\Config\Repository $config */
             $config = $app->make('config');
 
@@ -93,6 +93,7 @@ class ExactServiceProvider extends PackageServiceProvider
                 safetyMargin: (int) $config->get('exact.rate_limit.safety_margin', 2),
                 maxWaitSeconds: (int) $config->get('exact.rate_limit.max_wait', 10),
                 fallbackLimit: (int) $config->get('exact.rate_limit.fallback_limit', 60),
+                maxTotalWaitSeconds: (int) $config->get('exact.rate_limit.max_total_wait', 8),
             );
         });
 
