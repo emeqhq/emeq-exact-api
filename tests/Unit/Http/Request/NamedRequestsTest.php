@@ -388,6 +388,24 @@ it('entry-line updates PUT VATCode and VATAmountFC together', function (string $
     'sales entry line'    => [UpdateSalesEntryLine::class],
 ]);
 
+it('entry-line updates PUT VATCode, VATAmountFC and VATPercentage together', function (string $class): void {
+    $request = new $class('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', vatCode: '2', vatAmount: 21.0, vatPercentage: 0.21);
+
+    expect($request->body()->all())->toBe(['VATCode' => '2', 'VATAmountFC' => 21.0, 'VATPercentage' => 0.21]);
+})->with([
+    'purchase entry line' => [UpdatePurchaseEntryLine::class],
+    'sales entry line'    => [UpdateSalesEntryLine::class],
+]);
+
+it('entry-line updates keep a zero VATPercentage in the body', function (string $class): void {
+    $request = new $class('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', vatCode: '0', vatPercentage: 0.0);
+
+    expect($request->body()->all())->toBe(['VATCode' => '0', 'VATPercentage' => 0.0]);
+})->with([
+    'purchase entry line' => [UpdatePurchaseEntryLine::class],
+    'sales entry line'    => [UpdateSalesEntryLine::class],
+]);
+
 it('CreateDocument maps neutral input onto the Exact Documents body', function (): void {
     $request = new CreateDocument(
         subject: 'INV-1',

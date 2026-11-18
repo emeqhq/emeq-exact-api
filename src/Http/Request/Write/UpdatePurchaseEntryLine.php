@@ -13,7 +13,7 @@ use Saloon\Traits\Body\HasJsonBody;
  * Grootboek en/of btw van een inkoop-boekingsregel wijzigen — `PUT purchaseentry/PurchaseEntryLines(guid'{id}')`.
  *
  * Key = de `ID` (GUID) van de regel. De body draagt alleen de opgegeven velden uit
- * `GLAccount` (Edm.Guid), `VATCode` en `VATAmountFC`, zodat Exact de overige regelvelden
+ * `GLAccount` (Edm.Guid), `VATCode`, `VATAmountFC` en `VATPercentage`, zodat Exact de overige regelvelden
  * ongemoeid laat.
  */
 final class UpdatePurchaseEntryLine extends BaseRequest implements HasBody
@@ -27,6 +27,7 @@ final class UpdatePurchaseEntryLine extends BaseRequest implements HasBody
         private readonly ?string $glAccount = null,
         private readonly ?string $vatCode = null,
         private readonly int|float|null $vatAmount = null,
+        private readonly int|float|null $vatPercentage = null,
     ) {
     }
 
@@ -41,9 +42,10 @@ final class UpdatePurchaseEntryLine extends BaseRequest implements HasBody
     protected function defaultBody(): array
     {
         return array_filter([
-            'GLAccount'   => $this->glAccount,
-            'VATCode'     => $this->vatCode,
-            'VATAmountFC' => $this->vatAmount,
+            'GLAccount'     => $this->glAccount,
+            'VATCode'       => $this->vatCode,
+            'VATAmountFC'   => $this->vatAmount,
+            'VATPercentage' => $this->vatPercentage,
         ], static fn (mixed $v): bool => null !== $v);
     }
 }
