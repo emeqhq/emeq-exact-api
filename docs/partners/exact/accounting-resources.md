@@ -67,11 +67,18 @@ Exact-veldnamen. Het create-antwoord levert de externe referentie via
 
 | Request | Endpoint | Body |
 |---|---|---|
-| `Write\UpdatePurchaseEntryLine` | `purchaseentry/PurchaseEntryLines(guid'{id}')` | `GLAccount` |
-| `Write\UpdateSalesEntryLine` | `salesentry/SalesEntryLines(guid'{id}')` | `GLAccount` |
+| `Write\UpdatePurchaseEntryLine` | `purchaseentry/PurchaseEntryLines(guid'{id}')` | `GLAccount`, `VATCode`, `VATAmountFC` |
+| `Write\UpdateSalesEntryLine` | `salesentry/SalesEntryLines(guid'{id}')` | `GLAccount`, `VATCode`, `VATAmountFC` |
 
-Key = de regel-`ID` (GUID). Alleen `GLAccount` (Edm.Guid) gaat mee, zodat Exact de
-overige regelvelden ongemoeid laat.
+Key = de regel-`ID` (GUID). Alleen de opgegeven velden gaan mee (`GLAccount` als
+Edm.Guid, `VATCode` als Edm.String, `VATAmountFC` als Edm.Double), zodat Exact de
+overige regelvelden ongemoeid laat. Beide regel-resources ondersteunen PUT ("create,
+read, update or delete the entry lines"). Of Exact bij een PUT met alleen `VATCode`
+het btw-bedrag opnieuw berekent, zeggen de docs niet; controleer dat op de eerste
+gewijzigde regel. De docs noemen geen beperkingen (afgesloten periode,
+afgeletterd, ingediende btw-aangifte); een weigering komt als Exact-foutmelding terug.
+Bron: https://start.exactonline.nl/docs/HlpRestAPIResourcesDetails.aspx?name=PurchaseEntryPurchaseEntryLines
+en `?name=SalesEntrySalesEntryLines`.
 
 ### Relatie aanmaken
 

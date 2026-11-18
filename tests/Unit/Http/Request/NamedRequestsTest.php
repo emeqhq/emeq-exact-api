@@ -370,6 +370,24 @@ it('entry-line updates PUT only the GLAccount to the guid-addressed line', funct
     'sales entry line'    => [UpdateSalesEntryLine::class, "/salesentry/SalesEntryLines(guid'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')"],
 ]);
 
+it('entry-line updates PUT only the VATCode when no GLAccount is given', function (string $class): void {
+    $request = new $class('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', vatCode: '2');
+
+    expect($request->body()->all())->toBe(['VATCode' => '2']);
+})->with([
+    'purchase entry line' => [UpdatePurchaseEntryLine::class],
+    'sales entry line'    => [UpdateSalesEntryLine::class],
+]);
+
+it('entry-line updates PUT VATCode and VATAmountFC together', function (string $class): void {
+    $request = new $class('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', null, vatCode: '2', vatAmount: 21.0);
+
+    expect($request->body()->all())->toBe(['VATCode' => '2', 'VATAmountFC' => 21.0]);
+})->with([
+    'purchase entry line' => [UpdatePurchaseEntryLine::class],
+    'sales entry line'    => [UpdateSalesEntryLine::class],
+]);
+
 it('CreateDocument maps neutral input onto the Exact Documents body', function (): void {
     $request = new CreateDocument(
         subject: 'INV-1',

@@ -2,6 +2,11 @@
 
 Alle noemenswaardige wijzigingen aan `emeq/exact-api`. Volgt [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/) en [Semantic Versioning](https://semver.org/lang/nl/).
 
+## [0.14.0] - 2026-11-18
+
+### Added
+- `Write\UpdatePurchaseEntryLine` en `Write\UpdateSalesEntryLine` accepteren optioneel `vatCode` (`VATCode`) en `vatAmount` (`VATAmountFC`), zodat de btw-code en het btw-bedrag van een al geboekte regel te corrigeren zijn zonder de boeking te verwijderen. `glAccount` blijft de tweede parameter maar mag nu `null` zijn. Null-velden gaan niet mee in de body; een bestaande aanroep met alleen `glAccount` stuurt dezelfde body als voorheen.
+
 ## [0.13.0] - 2026-11-18
 
 ### Added

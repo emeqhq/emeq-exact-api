@@ -10,10 +10,11 @@ use Saloon\Enums\Method;
 use Saloon\Traits\Body\HasJsonBody;
 
 /**
- * Grootboek van een inkoop-boekingsregel wijzigen — `PUT purchaseentry/PurchaseEntryLines(guid'{id}')`.
+ * Grootboek en/of btw van een inkoop-boekingsregel wijzigen — `PUT purchaseentry/PurchaseEntryLines(guid'{id}')`.
  *
- * Key = de `ID` (GUID) van de regel. De body draagt alleen `GLAccount` (Edm.Guid),
- * zodat Exact de overige regelvelden ongemoeid laat.
+ * Key = de `ID` (GUID) van de regel. De body draagt alleen de opgegeven velden uit
+ * `GLAccount` (Edm.Guid), `VATCode` en `VATAmountFC`, zodat Exact de overige regelvelden
+ * ongemoeid laat.
  */
 final class UpdatePurchaseEntryLine extends BaseRequest implements HasBody
 {
@@ -23,7 +24,9 @@ final class UpdatePurchaseEntryLine extends BaseRequest implements HasBody
 
     public function __construct(
         private readonly string $id,
-        private readonly string $glAccount,
+        private readonly ?string $glAccount = null,
+        private readonly ?string $vatCode = null,
+        private readonly int|float|null $vatAmount = null,
     ) {
     }
 
@@ -37,6 +40,10 @@ final class UpdatePurchaseEntryLine extends BaseRequest implements HasBody
      */
     protected function defaultBody(): array
     {
-        return ['GLAccount' => $this->glAccount];
+        return array_filter([
+            'GLAccount'   => $this->glAccount,
+            'VATCode'     => $this->vatCode,
+            'VATAmountFC' => $this->vatAmount,
+        ], static fn (mixed $v): bool => null !== $v);
     }
 }
