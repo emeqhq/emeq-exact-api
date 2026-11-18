@@ -49,6 +49,11 @@ Afwijkingen om te onthouden (live geverifieerd):
 - Regel-`CostCenter`/`CostUnit` (kostenplaats/-drager, optioneel) dragen de **Code**
   (`Edm.String`) — niet de GUID, anders dan `GLAccount`. Null-velden worden niet
   meegestuurd. Geverifieerd tegen de OData-schema's van `SalesEntryLines`/`PurchaseEntryLines`.
+- Regel-`VATAmountFC` (`Edm.Double`, optioneel) overschrijft het btw-bedrag dat Exact zelf
+  uit `VATCode` berekent, voor zowel `SalesEntryLines` als `PurchaseEntryLines`. De
+  request mapt de neutrale `vatAmount` erop; weggelaten → Exact rekent zelf. Bron:
+  https://start.exactonline.nl/docs/HlpRestAPIResourcesDetails.aspx?name=PurchaseEntryPurchaseEntryLines
+  en `?name=SalesEntrySalesEntryLines`.
 - Header-`DueDate` (`Edm.DateTime`, optioneel, writable op POST voor zowel `SalesEntries`
   als `PurchaseEntries`) = vervaldatum van de openstaande post. Weggelaten → Exact leidt
   'm af uit `EntryDate` + de `PaymentCondition` van de relatie.

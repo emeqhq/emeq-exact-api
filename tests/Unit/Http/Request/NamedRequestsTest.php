@@ -118,6 +118,42 @@ it('CreatePurchaseEntry maps costCenter and costUnit onto the entry line', funct
     ]);
 });
 
+it('CreatePurchaseEntry maps vatAmount onto VATAmountFC and omits it when absent', function (): void {
+    $request = new CreatePurchaseEntry(
+        supplier: 'supp-guid',
+        entryDate: '2026-11-18',
+        journal: '20',
+        description: 'PINV-4',
+        lines: [
+            ['amount' => 4923.62, 'vatCode' => '1', 'vatAmount' => 1033.98],
+            ['amount' => 10.0, 'vatCode' => '1'],
+        ],
+    );
+
+    expect($request->body()->all()['PurchaseEntryLines'])->toBe([
+        ['AmountFC' => 4923.62, 'VATCode' => '1', 'VATAmountFC' => 1033.98],
+        ['AmountFC' => 10.0, 'VATCode' => '1'],
+    ]);
+});
+
+it('CreateSalesEntry maps vatAmount onto VATAmountFC and omits it when absent', function (): void {
+    $request = new CreateSalesEntry(
+        customer: 'cust-guid',
+        entryDate: '2026-11-18',
+        journal: '70',
+        description: 'INV-4',
+        lines: [
+            ['amount' => 4923.62, 'vatCode' => '1', 'vatAmount' => 1033.98],
+            ['amount' => 10.0, 'vatCode' => '1'],
+        ],
+    );
+
+    expect($request->body()->all()['SalesEntryLines'])->toBe([
+        ['AmountFC' => 4923.62, 'VATCode' => '1', 'VATAmountFC' => 1033.98],
+        ['AmountFC' => 10.0, 'VATCode' => '1'],
+    ]);
+});
+
 it('read requests own their division-relative OData path', function (string $class, string $endpoint): void {
     expect((new $class())->resolveEndpoint())->toBe($endpoint)
         ->and((new $class())->getMethod())->toBe(Method::GET);

@@ -2,6 +2,11 @@
 
 Alle noemenswaardige wijzigingen aan `emeq/exact-api`. Volgt [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/) en [Semantic Versioning](https://semver.org/lang/nl/).
 
+## [0.13.0] - 2026-11-18
+
+### Added
+- `Write\CreatePurchaseEntry` en `Write\CreateSalesEntry` accepteren per regel een optionele `vatAmount`, die als `VATAmountFC` (`Edm.Double`) in de body gaat. Zonder `vatAmount` rekent Exact het btw-bedrag zelf uit `VATCode`; met `vatAmount` krijgt de boeking het bedrag van de consumer, zodat afrondingsverschillen per regel niet meer afwijken van de factuur. Weggelaten of `null` → het veld wordt niet meegestuurd, bestaande callers merken niets.
+
 ## [0.12.0] - 2026-10-28
 
 ### Fixed

@@ -22,7 +22,7 @@ final class CreatePurchaseEntry extends BaseRequest implements HasBody
     protected Method $method = Method::POST;
 
     /**
-     * @param  list<array{description?: string|null, amount: int|float, vatCode?: string|null, glAccount?: string|null, costCenter?: string|null, costUnit?: string|null}>  $lines
+     * @param  list<array{description?: string|null, amount: int|float, vatCode?: string|null, glAccount?: string|null, costCenter?: string|null, costUnit?: string|null, vatAmount?: int|float|null}>  $lines
      */
     public function __construct(
         private readonly string $supplier,
@@ -58,6 +58,7 @@ final class CreatePurchaseEntry extends BaseRequest implements HasBody
                     'GLAccount'   => $line['glAccount'] ?? null,
                     'CostCenter'  => $line['costCenter'] ?? null,
                     'CostUnit'    => $line['costUnit'] ?? null,
+                    'VATAmountFC' => $line['vatAmount'] ?? null,
                 ], static fn (mixed $v): bool => null !== $v),
                 $this->lines,
             ),
